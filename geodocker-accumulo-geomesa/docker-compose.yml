@@ -1,50 +1,65 @@
-version: '2'
+version: '3.5'
+
 services:
     geoserver:
-        image: quay.io/geomesa/geoserver:geomesa-1.3.2-accumulo-1.7.3
+        image: quay.io/geomesa/geoserver:geomesa-2.0.0-m.1-accumulo-1.7.3
+        volumes:
+          - /data/geoserver/data:/data/geoserver/data #/opt/tomcat/webapps/geoserver/data
         ports:
           - 9090:9090
+        environment: 
+          GEOSERVER_DATA_DIR: /data/geoserver/data
     hdfs-name:
-        image: quay.io/geomesa/hdfs:geomesa-1.3.2-accumulo-1.7.3
+        image: quay.io/geomesa/hdfs:geomesa-2.0.0-m.1-accumulo-1.7.3
         command: name
         environment:
           HADOOP_MASTER_ADDRESS: hdfs-name
+        volumes:
+          - /data/hdfs:/data/hdfs
         ports:
           - 50070:50070
     hdfs-data:
-        image: quay.io/geomesa/hdfs:geomesa-1.3.2-accumulo-1.7.3
+        image: quay.io/geomesa/hdfs:geomesa-2.0.0-m.1-accumulo-1.7.3
         command: data
         environment:
           HADOOP_MASTER_ADDRESS: hdfs-name
+        volumes:
+          - /data/hdfs:/data/hdfs
         depends_on:
           - hdfs-name
     zookeeper:
         image: quay.io/geomesa/zookeeper:latest
         ports:
           - 2181:2181
+        volumes:
+          - /data/zookeeper:/data/zookeeper
     accumulo-master:
-      image: quay.io/geomesa/accumulo-geomesa:geomesa-1.3.2-accumulo-1.7.3
-      command: master --auto-init
-      environment:
-        HADOOP_MASTER_ADDRESS: hdfs-name
-        ZOOKEEPERS: zookeeper
-        ACCUMULO_PASSWORD: GisPwd
-      depends_on:
-        - zookeeper
-    accumulo-monitor:
-        image: quay.io/geomesa/accumulo-geomesa:geomesa-1.3.2-accumulo-1.7.3
-        command: monitor
+        image: quay.io/geomesa/accumulo-geomesa:geomesa-2.0.0-m.1-accumulo-1.7.3
+        command: master --auto-init
         environment:
           HADOOP_MASTER_ADDRESS: hdfs-name
           ZOOKEEPERS: zookeeper
-        ports:
-          - 9995:9995
-          - 50095:50095
+          ACCUMULO_PASSWORD: GisPwd
+        volumes:
+          - /data/hdfs:/data/hdfs
+          - /data/gdelt:/data/gdelt
+          - /home/pny/source:/source
         depends_on:
           - zookeeper
-          - accumulo-master
+    accumulo-monitor:
+      image: quay.io/geomesa/accumulo-geomesa:geomesa-2.0.0-m.1-accumulo-1.7.3
+      command: monitor
+      environment:
+        HADOOP_MASTER_ADDRESS: hdfs-name
+        ZOOKEEPERS: zookeeper
+      ports:
+        - 9995:9995
+        - 50095:50095
+      depends_on:
+        - zookeeper
+        - accumulo-master
     accumulo-tserver:
-        image: quay.io/geomesa/accumulo-geomesa:geomesa-1.3.2-accumulo-1.7.3
+        image: quay.io/geomesa/accumulo-geomesa:geomesa-2.0.0-m.1-accumulo-1.7.3
         command: tserver
         environment:
           HADOOP_MASTER_ADDRESS: hdfs-name
